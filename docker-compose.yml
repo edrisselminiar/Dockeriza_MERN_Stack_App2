@@ -1,0 +1,59 @@
+# Specify docker-compose file version
+version: '3'
+
+# Define all the services (containers) that make up the application
+services:
+  # MongoDB service configuration
+  mongo:
+    image: mongo                    # Use official MongoDB image from Docker Hub
+    container_name: mongo           # Name of the container
+    # ports:                        # Commented out port mapping
+    #   - "27017:27017"            # Not exposing MongoDB port to host machine for security
+    networks:
+      - mern-network               # Connect to custom network for inter-container communication
+
+  # Backend (Node.js/Express) service configuration
+  server:
+    build:
+      context: ./server            # Build context is the server directory
+      dockerfile: Dockerfile       # Use the Dockerfile in the server directory
+    container_name: server         # Name of the container
+    restart: always               # Automatically restart container if it crashes
+    ports:
+      - "5000:5000"              # Map container port 5000 to host port 5000
+    depends_on: 
+      - mongo                     # Ensure MongoDB starts before server
+    environment: 
+      # MongoDB Atlas connection string (should be in .env file for security)
+      - MONGO_URI=mongodb+srv://edrisselminiar01:d81nRFKqNLAEr1Qy@cluster0.lntgn.mongodb.net/
+      # - MONGO_URL=mongodb://mongo:27017    # Local MongoDB connection (commented out)
+    volumes:
+      - ./server:/server         # Mount local server directory to container for development
+    networks:
+      - mern-network            # Connect to the same network as MongoDB
+
+  # Frontend (React/Vite) service configuration
+  client:
+    build:
+      context: ./client          # Build context is the client directory
+      dockerfile: Dockerfile     # Use the Dockerfile in the client directory
+    container_name: client       # Name of the container
+    restart: always             # Automatically restart container if it crashes
+    ports:
+      - "5173:5173"            # Map container port 5173 (Vite default) to host
+    depends_on:
+      - server                  # Ensure server starts before client
+    volumes:
+      - ./client:/src/main     # Mount local client directory for hot reloading
+    networks:
+      - mern-network          # Connect to the same network as server
+
+# Commented out volume configuration for MongoDB persistence
+# volumes:
+#   mongodb_data:
+#     driver: local
+
+# Network configuration
+networks:
+  mern-network:                # Create a custom bridge network
+    driver: bridge            # Use bridge driver for local development
